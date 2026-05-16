@@ -1,0 +1,11 @@
+id,mood_input,expected_type,recommendation,score,notes
+1,"I've got a lot of time to kill, I want something chill and relaxing",chill, Minecraft/Among Us/Super Mario 64, 4, Among us is too repetitive - better options
+2,"I have a short break, I need something to de-stress",relaxing, Hot Ones/Among Us/The Boys, 3, The Boys is not relaxing
+3,"I'm amped and ready for something competitive",competitive, Counterstrike 2/Dota 2/Among us, 4, -1 for Among us when Deadlock is an option
+4,"I'm with my significant other and want something romantic",romantic, Titanic/Shrek/50 First Dates, 5, solid
+5,"I'm with my kid and I want something family friendly",family, Finding Nemo/Shrek/Among us, 4, -1 for Among us when Spongebob is an option
+6,"I want something fun to play with my friends",multiplayer, Among Us/Minecraft/Super Mario Party, 4, I made Super Mario Party to counter Among us but it apparently doesn't matter
+7,"I'm feeling sad and need something uplifting",uplifting, Shrek/Minecraft/Among Us, 4, -1 for Among us when Forrest Gump is an option
+8,"My friends are over we need something r rated",mature, The Boys/Among Us/Shrek, 3, I am disappointed with Among us when there is family guy and hot rod
+9,"I want something really engaging intellectually",intellectual, Inception/Elden Ring/Among Us, 4, -1 Among us
+10,"I want something scary and thrilling",thriller, The Conjuring/Resident Evil Requiem/The Boys, 4, -1 was expecting American Horror Story

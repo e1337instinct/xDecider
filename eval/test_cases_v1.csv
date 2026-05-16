@@ -1,0 +1,11 @@
+id,mood_input,expected_type,recommendation,score,notes
+1,"I've got a lot of time to kill, I want something chill and relaxing",chill,Minecraft/Titanic/Among Us,3,Titanic???
+2,"I have a short break, I need something to de-stress",relaxing,Minecraft/Hot Rod/Titanic,1,Titanic and Hot Rod are movies
+3,"I'm amped and ready for something competitive",competitive,Elden Ring/Minecraft/The Boys,2,Elden Ring is good but not others
+4,"I'm with my significant other and want something romantic",romantic,Titanic/Among Us/Elden Ring,5,gave 5 because only one good example but Elden Ring??
+5,"I'm with my kid and I want something family friendly",family,Spongebob/Minecraft/Among Us,4,all good choices but was expecting Finding Nemo
+6,"I want something fun to play with my friends",multiplayer,Among Us/Minecraft/World of Warcraft,5,all good choices
+7,"I'm feeling sad and need something uplifting",uplifting,Among Us/Minecraft/Inception,2,Minecraft is okay not other 2 was expecting Spongebob or Finding Nemo
+8,"My friends are over we need something r rated",mature,Hot Rod/Family Guy/Among Us,4,Among Us??? was expecting The Boys
+9,"I want something really engaging intellectually",intellectual,Inception/Elden Ring/Titanic,5,great choices was expecting Schindlers List
+10,"I want something scary and thrilling",thriller,The Conjuring/The Boys/Inception,5,once again needed more examples but got the correct option

@@ -1,0 +1,11 @@
+id,mood_input,expected_type,recommendation,score,notes
+1,"I've got a lot of time to kill, I want something chill and relaxing",chill, Minecraft/Among Us/Super Mario 64, 4, Good options but there was better answer than Among Us
+2,"I have a short break, I need something to de-stress",relaxing, Hot Ones/Among Us/50 First Dates, 3, Better choices than Among us and 50 First Dates which is a movie - was expecting shows
+3,"I'm amped and ready for something competitive",competitive, Counterstrike 2/Dota 2/Among Us, 4, -1 for Among Us - its getting repetitive and isn't that serious
+4,"I'm with my significant other and want something romantic",romantic, Titanic/Shrek/50 First Dates, 5, It properly selected each option I expected
+5,"I'm with my kid and I want something family friendly",family, Finding Nemo/Shrek/Elden Ring, 3, First 2 are great - but Elden Ring??? Was expecting Spongebob
+6,"I want something fun to play with my friends",multiplayer, Among Us/Minecraft/World of Warcraft,5 , Solid choices
+7,"I'm feeling sad and need something uplifting",uplifting, Shrek/Titanic/Elden Ring, 2, There are definitely better options than ELden Ring and Titanic when you're feeling down
+8,"My friends are over we need something r rated",mature, The Boys/Among Us/Shrek, 3, Was fully expecting Family guy and Hot Rod - I guess Shrek is okay?
+9,"I want something really engaging intellectually",intellectual, Inception/Elden Ring/Among Us, 4, -1 for Among us - I don't know why its being chosen so much
+10,"I want something scary and thrilling",thriller, The Conjuring/Resident Evil Requiem/The Boys, 4, One miss - Was expecting American Horror Story

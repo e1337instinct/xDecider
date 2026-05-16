@@ -1,0 +1,5 @@
+flask==3.0.3
+openai==1.51.2
+faiss-cpu==1.13.2
+numpy==2.4.4
+python-dotenv==1.0.1

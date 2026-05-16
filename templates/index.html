@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>xDecider — Pick What to Watch or Play</title>
+  <style>
+    :root {
+      --bg:         #0d0d14;
+      --surface:    #16162a;
+      --surface-2:  #1e1e38;
+      --border:     #2a2a48;
+      --accent:     #7c3aed;
+      --accent-lit: #a855f7;
+      --accent-dim: rgba(124,58,237,.18);
+      --text:       #e2e8f0;
+      --muted:      #8892a4;
+      --success:    #10b981;
+      --danger:     #ef4444;
+      --r:          12px;
+      --r-sm:       8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 64px;
+    }
+
+    /* ── Header ── */
+    header { text-align: center; margin-bottom: 40px; }
+    header h1 {
+      font-size: clamp(2rem, 6vw, 2.8rem);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p { color: var(--muted); margin-top: 8px; font-size: .95rem; }
+
+    /* ── Step indicator ── */
+    .steps {
+      display: flex;
+      align-items: center;
+      margin-bottom: 32px;
+      gap: 0;
+    }
+    .step-item { display: flex; align-items: center; gap: 8px; }
+    .step-dot {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      border: 2px solid var(--border);
+      color: var(--muted);
+      transition: all .25s;
+      flex-shrink: 0;
+    }
+    .step-dot.active  { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .step-dot.done    { border-color: var(--success); background: var(--success); color: #fff; }
+    .step-label { font-size: 13px; font-weight: 500; color: var(--muted); transition: color .25s; }
+    .step-item.active .step-label { color: var(--text); }
+    .step-line {
+      width: 40px; height: 2px;
+      background: var(--border);
+      margin: 0 6px;
+      transition: background .25s;
+    }
+    .step-line.done { background: var(--success); }
+
+    /* ── Card ── */
+    .card {
+      width: 100%; max-width: 700px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 36px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.45);
+    }
+    .card-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 6px; }
+    .card-desc  { color: var(--muted); font-size: .9rem; line-height: 1.55; margin-bottom: 28px; }
+
+    /* ── Form elements ── */
+    .form-group { margin-bottom: 18px; }
+    label {
+      display: block;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .6px;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+    input, select {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text);
+      padding: 10px 14px;
+      font-size: .93rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .2s;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    select option { background: #1e1e38; }
+    input::placeholder { color: var(--muted); }
+
+    /* ── Add-item panel ── */
+    .item-form {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+    .item-form-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .item-form-grid .form-group,
+    .item-form .form-group { margin-bottom: 0; }
+
+    /* ── Library list ── */
+    .library-list {
+      display: flex; flex-direction: column; gap: 8px;
+      margin-bottom: 20px;
+      max-height: 300px; overflow-y: auto;
+    }
+    .library-list::-webkit-scrollbar { width: 4px; }
+    .library-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .lib-item {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 10px 14px;
+    }
+    .lib-item-info { flex: 1; min-width: 0; }
+    .lib-item-title {
+      font-weight: 600; font-size: .93rem;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .lib-item-meta { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+
+    .badge {
+      font-size: 10px; font-weight: 700;
+      padding: 2px 9px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: .4px;
+      flex-shrink: 0;
+    }
+    .badge-movie { background: #1a2f50; color: #60a5fa; }
+    .badge-show  { background: #132d22; color: #34d399; }
+    .badge-game  { background: #271a50; color: #c084fc; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 10px 20px;
+      border-radius: var(--r-sm);
+      font-size: .9rem; font-weight: 600;
+      cursor: pointer; border: none;
+      font-family: inherit;
+      transition: all .2s;
+    }
+    .btn-primary  { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-lit); }
+    .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+
+    .btn-ghost {
+      background: transparent; color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+
+    .btn-add {
+      width: 100%; justify-content: center;
+      background: var(--accent-dim);
+      color: var(--accent-lit);
+      border: 1px dashed var(--accent);
+      padding: 11px;
+      border-radius: var(--r-sm);
+    }
+    .btn-add:hover { background: var(--accent); color: #fff; }
+
+    .btn-remove {
+      background: none; border: none; cursor: pointer;
+      color: #ef4444; font-size: 1.1rem; line-height: 1;
+      padding: 2px 4px;
+      opacity: .7;
+      transition: opacity .2s, transform .2s;
+    }
+    .btn-remove:hover { opacity: 1; transform: scale(1.2); }
+
+    /* ── Mood choices ── */
+    .choice-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .choice-btn {
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: .88rem;
+      font-family: inherit;
+      transition: all .2s;
+    }
+    .choice-btn:hover { border-color: var(--accent-lit); color: var(--text); }
+    .choice-btn.selected {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+      color: var(--accent-lit);
+      font-weight: 600;
+    }
+
+    /* ── Divider ── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+    /* ── Footer row ── */
+    .footer-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 28px; gap: 12px;
+    }
+    .item-count { font-size: .82rem; color: var(--muted); }
+
+    /* ── Error banner ── */
+    .error-msg {
+      display: none;
+      background: rgba(239,68,68,.12);
+      border: 1px solid var(--danger);
+      border-radius: var(--r-sm);
+      padding: 11px 15px;
+      color: #fca5a5;
+      font-size: .88rem;
+      margin-bottom: 18px;
+    }
+    .error-msg.show { display: block; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center; color: var(--muted);
+      font-size: .88rem; padding: 20px 0;
+    }
+
+    /* ── Loading ── */
+    #view-loading {
+      text-align: center;
+      padding: 72px 32px;
+    }
+    .spinner {
+      width: 50px; height: 50px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .75s linear infinite;
+      margin: 0 auto 28px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+    .loading-sub   { color: var(--muted); font-size: .9rem; }
+
+    /* ── Result ── */
+    .result-headline {
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 800; line-height: 1.2;
+      background: linear-gradient(135deg, #a855f7, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 18px;
+    }
+    .result-body {
+      font-size: .97rem; line-height: 1.75;
+      color: var(--text); margin-bottom: 28px;
+    }
+    .matches-box {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 16px 18px;
+      margin-bottom: 28px;
+    }
+    .matches-label {
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .8px;
+      color: var(--muted); margin-bottom: 12px;
+    }
+    .match-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 0; font-size: .88rem;
+    }
+    .match-row + .match-row { border-top: 1px solid var(--border); }
+    .match-genre { color: var(--muted); font-size: .8rem; }
+    .match-confidence {
+      margin-left: auto;
+      font-size: .75rem; font-weight: 700;
+      color: var(--accent-lit);
+      background: var(--accent-dim);
+      padding: 2px 8px; border-radius: 10px;
+      flex-shrink: 0;
+    }
+
+    /* ── Views ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Responsive ── */
+    @media (max-width: 560px) {
+      .card { padding: 24px 20px; }
+      .item-form-grid { grid-template-columns: 1fr; }
+      .step-label { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>xDecider</h1>
+  <p>Your personal AI entertainment advisor</p>
+</header>
+
+<!-- Step indicator -->
+<div class="steps" id="stepIndicator">
+  <div class="step-item active" id="si-1">
+    <div class="step-dot active" id="dot-1">1</div>
+    <span class="step-label">Library</span>
+  </div>
+  <div class="step-line" id="line-1-2"></div>
+  <div class="step-item" id="si-2">
+    <div class="step-dot" id="dot-2">2</div>
+    <span class="step-label">Mood</span>
+  </div>
+  <div class="step-line" id="line-2-3"></div>
+  <div class="step-item" id="si-3">
+    <div class="step-dot" id="dot-3">3</div>
+    <span class="step-label">Result</span>
+  </div>
+</div>
+
+<!-- ── VIEW 1: Library ── -->
+<div class="card view active" id="view-1">
+  <div class="card-title">Your Library</div>
+  <div class="card-desc">A sample library is pre-loaded to get you started. Clear it and add your own titles, or keep going with what's here.</div>
+
+  <div class="error-msg" id="err-1"></div>
+
+  <div class="library-list" id="libraryList">
+    <div class="empty-state">No items yet — add your first title below.</div>
+  </div>
+
+  <!-- Add item form -->
+  <div class="item-form">
+    <div class="item-form-grid">
+      <div class="form-group">
+        <label>Title *</label>
+        <input id="newTitle" type="text" placeholder="e.g. The Dark Knight" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label>Type *</label>
+        <select id="newType">
+          <option value="Movie">Movie</option>
+          <option value="Show">Show</option>
+          <option value="Game">Game</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Genre <span id="genreAutoLabel" style="display:none;font-weight:400;text-transform:none;font-size:11px;color:var(--accent-lit)">· auto-detected</span></label>
+        <input id="newGenre" type="text" placeholder="Auto-detected on title entry" autocomplete="off" />
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Notes <span style="font-weight:400;text-transform:none;font-size:11px">(optional — e.g. "intense, mind-bending")</span></label>
+      <input id="newNotes" type="text" placeholder="Any extra details…" autocomplete="off" />
+    </div>
+    <button class="btn btn-add" onclick="addItem()">＋ Add to Library</button>
+  </div>
+
+  <div class="footer-row">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="item-count" id="itemCount">0 items</span>
+      <button class="btn btn-ghost" id="clearBtn" onclick="clearLibrary()" style="padding:6px 14px;font-size:.82rem;color:#ef4444;border-color:#ef4444">Clear all</button>
+    </div>
+    <button class="btn btn-primary" id="toMoodBtn" onclick="submitLibrary()" disabled>Continue →</button>
+  </div>
+</div>
+
+<!-- ── VIEW 2: Mood ── -->
+<div class="card view" id="view-2">
+  <div class="card-title">How are you feeling?</div>
+  <div class="card-desc">Answer these quick questions and we'll find the best match from your library.</div>
+
+  <div class="error-msg" id="err-2"></div>
+
+  <div class="form-group">
+    <label>How much time do you have?</label>
+    <div class="choice-group" id="grp-time">
+      <button class="choice-btn" data-group="time" data-value="quick"   onclick="pick(this)">⚡ Under 30 min</button>
+      <button class="choice-btn" data-group="time" data-value="medium"  onclick="pick(this)">🎬 1–2 hours</button>
+      <button class="choice-btn" data-group="time" data-value="long"    onclick="pick(this)">🌙 2–4 hours</button>
+      <button class="choice-btn" data-group="time" data-value="all_day" onclick="pick(this)">☀️ All day</button>
+    </div>
+  </div>
+
+  <hr />
+
+  <div class="form-group">
+    <label>Energy level?</label>
+    <div class="choice-group" id="grp-energy">
+      <button class="choice-btn" data-group="energy" data-value="low"    onclick="pick(this)">😴 Low / Chill</button>
+      <button class="choice-btn" data-group="energy" data-value="medium" onclick="pick(this)">😊 Medium</button>
+      <button class="choice-btn" data-group="energy" data-value="high"   onclick="pick(this)">🔥 High / Pumped</button>
+    </div>
+  </div>
+
+  <hr />
+
+  <div class="form-group">
+    <label>What's your mood?</label>
+    <div class="choice-group" id="grp-mood">
+      <button class="choice-btn" data-group="mood" data-value="chill"        onclick="pick(this)">🛋️ Chill</button>
+      <button class="choice-btn" data-group="mood" data-value="adventurous"  onclick="pick(this)">🗺️ Adventurous</button>
+      <button class="choice-btn" data-group="mood" data-value="social"       onclick="pick(this)">😄 Fun &amp; Social</button>
+      <button class="choice-btn" data-group="mood" data-value="thoughtful"   onclick="pick(this)">💭 Thoughtful</button>
+      <button class="choice-btn" data-group="mood" data-value="thrilling"    onclick="pick(this)">😱 Thrilling</button>
+      <button class="choice-btn" data-group="mood" data-value="creative"     onclick="pick(this)">🎨 Creative</button>
+      <button class="choice-btn" data-group="mood" data-value="uplifting"    onclick="pick(this)">✨ Uplifting</button>
+      <button class="choice-btn" data-group="mood" data-value="competitive"  onclick="pick(this)">🏆 Competitive</button>
+      <button class="choice-btn" data-group="mood" data-value="horror"       onclick="pick(this)">👻 Horror</button>
+      <button class="choice-btn" data-group="mood" data-value="dark_humor"   onclick="pick(this)">🖤 Dark Humor</button>
+      <button class="choice-btn" data-group="mood" data-value="romantic"     onclick="pick(this)">💕 Romantic</button>
+      <button class="choice-btn" data-group="mood" data-value="nostalgic"    onclick="pick(this)">🕰️ Nostalgic</button>
+    </div>
+  </div>
+
+  <hr />
+
+  <div class="form-group">
+    <label>Solo or with others?</label>
+    <div class="choice-group" id="grp-social">
+      <button class="choice-btn" data-group="social" data-value="solo"  onclick="pick(this)">🧍 Solo</button>
+      <button class="choice-btn" data-group="social" data-value="group" onclick="pick(this)">👥 With others</button>
+    </div>
+  </div>
+
+  <hr />
+
+  <div class="form-group">
+    <label>Any genre preference? <span style="font-weight:400;text-transform:none;font-size:11px">(optional)</span></label>
+    <input id="genrePref" type="text" placeholder="e.g. horror, comedy, sci-fi, RPG…" />
+  </div>
+
+  <hr />
+
+  <div class="form-group" style="margin-bottom:0">
+    <label>Describe your mood in your own words <span style="font-weight:400;text-transform:none;font-size:11px">(optional)</span></label>
+    <textarea id="moodFreeText" rows="3" placeholder="e.g. I want something I can fall asleep to, or something intense that keeps me on the edge of my seat…" style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:10px 14px;font-size:.93rem;font-family:inherit;outline:none;resize:vertical;transition:border-color .2s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+  </div>
+
+  <div class="footer-row">
+    <button class="btn btn-ghost" onclick="showView(1)">← Back</button>
+    <button class="btn btn-primary" onclick="getRecommendation()">🎯 Find My Match</button>
+  </div>
+</div>
+
+<!-- ── Loading ── -->
+<div class="card view" id="view-loading">
+  <div class="spinner"></div>
+  <div class="loading-title">Searching your library…</div>
+  <div class="loading-sub">Matching your mood with the perfect pick</div>
+</div>
+
+<!-- ── VIEW 3: Result ── -->
+<div class="card view" id="view-3">
+  <div class="card-title">Your Perfect Pick Tonight</div>
+  <div class="result-headline" id="resultTitle"></div>
+  <div class="result-body" id="resultBody"></div>
+
+  <div class="matches-box">
+    <div class="matches-label">Top matches considered</div>
+    <div id="matchesList"></div>
+  </div>
+
+  <button class="btn btn-primary" onclick="showView(2)" style="width:100%;justify-content:center">🔄 Try Different Mood</button>
+
+  <div style="margin-top:32px;padding-top:20px;border-top:1px solid var(--border)">
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Want to start fresh with a different library?</p>
+    <button class="btn btn-ghost" onclick="resetAll()" style="font-size:.82rem;padding:7px 16px;color:var(--muted)">📚 Change Library</button>
+  </div>
+</div>
+
+<script>
+  /* ── Sample library ── */
+  const SAMPLE_LIBRARY = [
+    { title: 'Titanic',           type: 'Movie', genre: 'Romantic',         notes: '' },
+    { title: 'Hot Rod',           type: 'Movie', genre: 'Comedy',           notes: '' },
+    { title: 'Inception',         type: 'Movie', genre: 'Thriller',         notes: '' },
+    { title: 'Finding Nemo',      type: 'Movie', genre: 'Family',           notes: '' },
+    { title: "Schindler's List",  type: 'Movie', genre: 'Historical Drama', notes: '' },
+    { title: 'The Conjuring',     type: 'Movie', genre: 'Horror',           notes: '' },
+    { title: 'Minecraft',         type: 'Game',  genre: 'Sandbox',          notes: '' },
+    { title: 'Elden Ring',        type: 'Game',  genre: 'Action RPG',       notes: '' },
+    { title: 'Among Us',          type: 'Game',  genre: 'Party/Mystery',    notes: 'social deduction with a group; requires multiple players; not suited for solo, competitive ranked, romance, or family' },
+    { title: 'Super Mario Party', type: 'Game',  genre: 'Party',            notes: '' },
+    { title: 'Deadlock',          type: 'Game',  genre: 'MOBA',             notes: '' },
+    { title: 'World of Warcraft', type: 'Game',  genre: 'MMO',              notes: '' },
+    { title: 'Super Mario 64',    type: 'Game',  genre: 'Platformer',       notes: '' },
+    { title: 'Forza Horizon 6',   type: 'Game',  genre: 'Racing Simulator', notes: '' },
+    { title: 'SpongeBob',              type: 'Show',  genre: 'Family Comedy',    notes: '' },
+    { title: 'The Boys',               type: 'Show',  genre: 'Thriller',         notes: '' },
+    { title: 'Family Guy',             type: 'Show',  genre: 'Adult Comedy',     notes: '' },
+    { title: 'Hot Ones',               type: 'Show',  genre: 'Talk Show',        notes: '' },
+    { title: 'American Horror Story',  type: 'Show',  genre: 'Horror',           notes: '' },
+    { title: 'Counter-Strike 2',       type: 'Game',  genre: 'Competitive FPS',  notes: '' },
+    { title: 'Dota 2',                 type: 'Game',  genre: 'MOBA',             notes: '' },
+    { title: 'Resident Evil Requiem',  type: 'Game',  genre: 'Horror',           notes: '' },
+    { title: '50 First Dates',         type: 'Movie', genre: 'Romantic Comedy',  notes: '' },
+    { title: 'Shrek',                  type: 'Movie', genre: 'Romantic Comedy / Family', notes: '' },
+    { title: 'Forrest Gump',           type: 'Movie', genre: 'Comedy / Drama',   notes: '' },
+  ];
+
+  /* ── State ── */
+  let library = SAMPLE_LIBRARY.map(item => ({ ...item }));
+
+  /* ── Library step ── */
+  function addItem() {
+    const title = document.getElementById('newTitle').value.trim();
+    if (!title) { document.getElementById('newTitle').focus(); return; }
+
+    library.push({
+      title,
+      type:  document.getElementById('newType').value,
+      genre: document.getElementById('newGenre').value.trim(),
+      notes: document.getElementById('newNotes').value.trim(),
+    });
+
+    ['newTitle','newGenre','newNotes'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('newTitle').focus();
+    renderLibrary();
+  }
+
+  function removeItem(i) {
+    library.splice(i, 1);
+    renderLibrary();
+  }
+
+  function clearLibrary() {
+    library = [];
+    renderLibrary();
+  }
+
+  function renderLibrary() {
+    const list  = document.getElementById('libraryList');
+    const count = document.getElementById('itemCount');
+    const btn   = document.getElementById('toMoodBtn');
+
+    count.textContent = `${library.length} item${library.length !== 1 ? 's' : ''}`;
+    btn.disabled = library.length === 0;
+
+    if (!library.length) {
+      list.innerHTML = '<div class="empty-state">No items yet — add your first title below.</div>';
+      return;
+    }
+
+    list.innerHTML = library.map((item, i) => `
+      <div class="lib-item">
+        <div class="lib-item-info">
+          <div class="lib-item-title">${esc(item.title)}</div>
+          <div class="lib-item-meta">${[item.genre, item.notes].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</div>
+        </div>
+        <span class="badge badge-${item.type.toLowerCase()}">${esc(item.type)}</span>
+        <button class="btn-remove" onclick="removeItem(${i})" title="Remove">×</button>
+      </div>
+    `).join('');
+  }
+
+  renderLibrary();
+
+  document.getElementById('newTitle').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addItem();
+  });
+
+  /* ── Genre auto-detect ── */
+  document.getElementById('newTitle').addEventListener('blur', async () => {
+    const title = document.getElementById('newTitle').value.trim();
+    if (!title) return;
+    const type  = document.getElementById('newType').value;
+    const label = document.getElementById('genreAutoLabel');
+    const genreInput = document.getElementById('newGenre');
+    genreInput.placeholder = 'Detecting…';
+    genreInput.disabled = true;
+    label.style.display = 'none';
+    try {
+      const res  = await fetch('/api/genre-detect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, type }),
+      });
+      const data = await res.json();
+      if (data.genre) {
+        genreInput.value = data.genre;
+        label.style.display = 'inline';
+      }
+    } catch (_) {}
+    genreInput.placeholder = 'Auto-detected on title entry';
+    genreInput.disabled = false;
+  });
+
+  async function submitLibrary() {
+    clearErr('err-1');
+    try {
+      const res  = await fetch('/api/library', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: library }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to index library.');
+      showView(2);
+    } catch (e) {
+      showErr('err-1', e.message);
+    }
+  }
+
+  /* ── Mood step ── */
+  function pick(btn) {
+    const group = btn.dataset.group;
+    if (group === 'mood') {
+      btn.classList.toggle('selected');
+    } else {
+      const wasSelected = btn.classList.contains('selected');
+      document.querySelectorAll(`[data-group="${group}"]`).forEach(b => b.classList.remove('selected'));
+      if (!wasSelected) btn.classList.add('selected');
+    }
+  }
+
+  async function getRecommendation() {
+    const get    = g => document.querySelector(`[data-group="${g}"].selected`)?.dataset.value;
+    const moods  = [...document.querySelectorAll('[data-group="mood"].selected')].map(b => b.dataset.value);
+    const time   = get('time');
+    const energy = get('energy');
+
+    if (!time || !energy || moods.length === 0) {
+      showErr('err-2', 'Please select your available time, energy level, and at least one mood.');
+      return;
+    }
+    clearErr('err-2');
+
+    showLoading();
+
+    try {
+      const res  = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mood: {
+            time, energy, moods,
+            social:     get('social') || '',
+            genre_pref: document.getElementById('genrePref').value.trim(),
+            free_text:  document.getElementById('moodFreeText').value.trim(),
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to get a recommendation.');
+      renderResult(data);
+    } catch (e) {
+      showView(2);
+      showErr('err-2', e.message);
+    }
+  }
+
+  function renderResult(data) {
+    document.getElementById('resultTitle').textContent = data.recommended_title || '';
+
+    // Strip markdown bold, then remove leading title if the AI duplicated it
+    let cleanText = (data.recommendation || '').replace(/\*\*(.+?)\*\*/g, '$1').trim();
+    if (data.recommended_title) {
+      const escaped = data.recommended_title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      cleanText = cleanText.replace(new RegExp(`^${escaped}[\\s\\W]*`, 'i'), '').trim();
+    }
+    document.getElementById('resultBody').textContent = cleanText;
+
+    document.getElementById('matchesList').innerHTML =
+      (data.top_matches || []).map(m => `
+        <div class="match-row">
+          <span class="badge badge-${(m.type||'').toLowerCase()}">${esc(m.type||'')}</span>
+          <span>${esc(m.title)}</span>
+          ${m.genre ? `<span class="match-genre">· ${esc(m.genre)}</span>` : ''}
+          ${m.confidence != null ? `<span class="match-confidence">${m.confidence}%</span>` : ''}
+        </div>
+      `).join('');
+
+    showView(3);
+  }
+
+  /* ── Navigation ── */
+  function showView(n) {
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    document.getElementById(n === 'loading' ? 'view-loading' : `view-${n}`).classList.add('active');
+    if (typeof n === 'number') updateDots(n);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function showLoading() { showView('loading'); }
+
+  function resetAll() {
+    library = [];
+    renderLibrary();
+    document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+    document.getElementById('genrePref').value = '';
+    document.getElementById('moodFreeText').value = '';
+    clearErr('err-1'); clearErr('err-2');
+    showView(1);
+  }
+
+  function updateDots(active) {
+    for (let i = 1; i <= 3; i++) {
+      const dot = document.getElementById(`dot-${i}`);
+      const si  = document.getElementById(`si-${i}`);
+      dot.classList.remove('active', 'done');
+      si.classList.remove('active');
+      if (i < active)       { dot.classList.add('done');   dot.textContent = '✓'; }
+      else if (i === active) { dot.classList.add('active'); dot.textContent = i; si.classList.add('active'); }
+      else                  { dot.textContent = i; }
+    }
+    document.getElementById('line-1-2').classList.toggle('done', active > 1);
+    document.getElementById('line-2-3').classList.toggle('done', active > 2);
+  }
+
+  /* ── Helpers ── */
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function showErr(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+  function clearErr(id) {
+    document.getElementById(id).classList.remove('show');
+  }
+</script>
+</body>
+</html>
